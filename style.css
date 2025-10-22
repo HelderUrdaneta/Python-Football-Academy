@@ -9,32 +9,12 @@
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     background-color: #f5f8fa;
-}
-
-/* Resalta la línea actual en el editor CodeMirror */
-.CodeMirror .current-line-highlight {
-    background: #39FF14 !important; /* Verde fluorescente */
-    color: #000 !important; /* Asegura que el texto sea legible */
-}
-
-.cell-coord {
-    position: absolute;
-    top: 2px;
-    right: 4px;
-    font-size: 0.7em;
-    color: #888;
-    pointer-events: none;
-    z-index: 10;
-}
-
-.goal-cell {
-    border: 2px solid var(--accent-color);
-    box-shadow: 0 0 8px 2px var(--accent-color);
-    background: rgba(231, 76, 60, 0.08);
+    overflow: auto; /* Permite scroll general en pantallas pequeñas */
 }
 
 .app-container {
-    height: calc(100vh - 56px);
+    max-height: calc(100vh - 56px);
+    overflow: auto; /* Hace que el contenido sea desplazable si no cabe */
 }
 
 .code-editor {
@@ -43,28 +23,49 @@ body {
     flex-direction: column;
 }
 
+/* Resalta la línea actual en el editor CodeMirror */
+.CodeMirror .current-line-highlight {
+    background: rgba(57, 255, 20, 0.4) !important;
+}
+
 .CodeMirror {
-    height: calc(100% - 140px); /* Ajustado para nueva consola */
+    flex-grow: 1; /* Permite que el editor crezca */
     border-radius: 8px;
     font-size: 16px;
+    height: auto; /* El contenedor flex se encarga de la altura */
+}
+
+/* --- Estilo para las coordenadas de la cuadrícula --- */
+.cell-coord {
+    position: absolute;
+    top: 1px;
+    left: 3px;
+    font-size: 0.65em;
+    color: rgba(255, 255, 255, 0.7);
+    font-weight: bold;
+    pointer-events: none;
+    z-index: 10;
+    text-shadow: 1px 1px 2px black;
+}
+
+.goal-cell {
+    background: rgba(255, 255, 0, 0.2); /* Fondo amarillo semi-transparente para el área de gol */
 }
 
 .controls {
-    padding-top: 15px;
+    flex-shrink: 0; /* Evita que los controles se encojan */
 }
 
 .soccer-field {
     width: 100%;
     height: 100%;
-    background-color: #2ecc71;
     background-image: url('./campo/campo.png');
     background-size: cover;
     background-position: center;
     border-radius: 8px;
     position: relative;
     overflow: hidden;
-    display: block;
-    min-height: 300px;
+    min-height: 400px; /* Asegura una altura mínima */
 }
 
 .grid-container {
@@ -74,61 +75,88 @@ body {
     height: 100%;
     width: 100%;
     position: absolute;
-    top: 0;
-    left: 0;
 }
 
 .grid-cell {
-    border: 1px dashed rgba(255, 255, 255, 0.5);
+    border: 1px dashed rgba(255, 255, 255, 0.3);
     position: relative;
-    display: flex;
-    justify-content: center;
-    align-items: center;
+}
+
+.player, .defense, .ball {
+    position: absolute;
+    background-size: contain;
+    background-position: center;
+    background-repeat: no-repeat;
+    transition: all 0.3s ease;
 }
 
 .player {
-    position: absolute;
     width: 80%;
     height: 80%;
+    top: 10%;
+    left: 10%;
     z-index: 2;
-    background-size: contain;
-    background-position: center;
-    background-repeat: no-repeat;
-    transition: all 0.35s ease;
-    display: flex;
-    justify-content: center;
-    align-items: center;
 }
 
 .defense {
-    position: absolute;
     width: 70%;
     height: 70%;
+    top: 15%;
+    left: 15%;
     z-index: 1;
-    background-size: contain;
-    background-position: center;
-    background-repeat: no-repeat;
 }
 
 .ball {
-    position: absolute;
-    width: 25%;
-    height: 25%;
-    z-index: 3;
-    background-image: url('./campo/balon.png');
-    background-size: contain;
-    background-position: center;
-    background-repeat: no-repeat;
-}
-
-/* NUEVO: Estilo para el balón cuando el jugador lo tiene */
-.ball.in-possession {
     width: 30%;
     height: 30%;
-    /* Posiciona el balón delante del jugador */
-    transform: translate(110%, 80%);
+    top: 35%;
+    left: 35%;
+    z-index: 3;
+    background-image: url('./campo/balon.png');
 }
 
+.ball.in-possession {
+    width: 35%;
+    height: 35%;
+    /* Posiciona el balón delante del jugador */
+    transform: translate(90%, 70%);
+}
+
+input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    background: transparent;
+    cursor: pointer;
+    width: 100%;
+}
+input[type="range"]::-webkit-slider-runnable-track {
+    background: #5c636a;
+    height: 0.5rem;
+    border-radius: 0.5rem;
+}
+input[type="range"]::-moz-range-track {
+    background: #5c636a;
+    height: 0.5rem;
+    border-radius: 0.5rem;
+}
+input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    margin-top: -4px;
+    background-color: var(--primary-color);
+    height: 1.2rem;
+    width: 1.2rem;
+    border-radius: 50%;
+    border: 2px solid #fff;
+}
+input[type="range"]::-moz-range-thumb {
+    border: none;
+    background-color: var(--primary-color);
+    height: 1.2rem;
+    width: 1.2rem;
+    border-radius: 50%;
+    border: 2px solid #fff;
+}
 
 .score-panel {
     background-color: rgba(0, 0, 0, 0.7);
@@ -143,8 +171,8 @@ body {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    background-color: rgba(255, 255, 255, 0.9);
-    padding: 20px;
+    background-color: rgba(255, 255, 255, 0.95);
+    padding: 20px 40px;
     border-radius: 10px;
     text-align: center;
     z-index: 100;
@@ -152,65 +180,46 @@ body {
     display: none;
 }
 
-/* Animations */
 @keyframes goal-celebration {
-    0% { transform: scale(1) rotate(0); }
-    50% { transform: scale(1.2) rotate(0); }
-    100% { transform: scale(1) rotate(0); }
+    0%, 100% { transform: scale(1) rotate(0); }
+    50% { transform: scale(1.2) rotate(360deg); }
 }
 
 .celebration {
-    animation: goal-celebration 0.5s ease-in-out 3;
-}
-
-/* ----- ESTILOS SIN CAMBIOS IMPORTANTES (PERO INCLUIDOS PARA COMPLETITUD) ----- */
-
-.navbar-brand {
-    font-weight: 700;
-    font-size: 1.5rem;
-}
-
-.btn-primary { background-color: var(--primary-color); border-color: var(--primary-color); }
-.btn-success { background-color: var(--secondary-color); border-color: var(--secondary-color); }
-.btn-danger { background-color: var(--accent-color); border-color: var(--accent-color); }
-
-.avatar-selector-container {
-    padding: 15px;
-    background-color: white;
-    border-radius: 8px;
-    margin-bottom: 15px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    animation: goal-celebration 1s ease-in-out;
 }
 
 .avatar-slide {
     cursor: pointer;
     padding: 5px;
     transition: all 0.2s;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
+    text-align: center;
 }
-
 .avatar-slide.selected {
     background-color: #e3f2fd;
     border-radius: 8px;
     transform: scale(1.05);
 }
-
 .avatar-img {
     width: 80px;
     height: 80px;
     object-fit: contain;
 }
 
-.welcome-modal .modal-content { border-radius: 15px; background-color: #f8f9fa; }
-.welcome-modal .modal-header { background-color: var(--primary-color); color: white; border-top-left-radius: 15px; border-top-right-radius: 15px; }
+.instruction-box { background-color: rgba(255, 255, 255, 0.9); border-radius: 8px; padding: 15px; }
 
-.instruction-box { background-color: rgba(255, 255, 255, 0.9); border-radius: 8px; padding: 10px; margin-top: 10px; font-size: 0.9rem; }
-.level-badge { position: absolute; top: 10px; right: 10px; background-color: var(--primary-color); color: white; font-weight: bold; padding: 5px 10px; border-radius: 15px; z-index: 100; }
-.function-tooltip { background-color: #f8f9fa; border-left: 4px solid var(--primary-color); padding: 8px; margin: 5px 0; font-size: 0.9rem; border-radius: 4px; }
-
-@media (max-width: 767px) {
-    .app-container { height: auto; }
-    .code-editor, .soccer-field { height: 50vh; }
+.python-console-sim { 
+    background:#272822; 
+    color:#e6e6e6; 
+    padding: 8px 12px;
+    border-radius:6px;
+    font-family: monospace;
+    font-size: 0.9em;
+    min-height: 2.5em;
+    white-space: pre-wrap;
+    word-break: break-all;
+}
+.python-console-sim span:first-child {
+    color: #888;
+    margin-right: 8px;
 }

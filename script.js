@@ -1,75 +1,34 @@
 document.addEventListener('DOMContentLoaded', function() {
-    // Preload images function
-    function preloadImages() {
-        // Preload avatars
-        for (let i = 1; i <= 18; i++) {
-            const img = new Image();
-            img.src = `./personajes/personaje${i}.png`;
-        }
-        
-        // Preload defenses
-        for (let i = 1; i <= 10; i++) {
-            const img = new Image();
-            img.src = `./defensas/defensa${i}.png`;
-        }
-        
-        // Preload ball and field
-        const ball = new Image();
-        ball.src = './campo/balon.png';
-        
-        const field = new Image();
-        field.src = './campo/campo.png';
-    }
+    // Preload images
+    for (let i = 1; i <= 18; i++) { new Image().src = `./personajes/personaje${i}.png`; }
+    for (let i = 1; i <= 10; i++) { new Image().src = `./defensas/defensa${i}.png`; }
+    new Image().src = './campo/balon.png';
+    new Image().src = './campo/campo.png';
     
-    // Call preload function
-    preloadImages();
-    
-    // Initialize CodeMirror
     const editor = CodeMirror.fromTextArea(document.getElementById('code-editor'), {
         mode: 'python',
         theme: 'monokai',
         lineNumbers: true,
-        indentUnit: 4,
-        autoCloseBrackets: true,
-        matchBrackets: true
+        indentUnit: 4
     });
 
-    // Initialize Splide carousel for avatar selection
+    // Carousel setup
     const avatarList = document.getElementById('avatar-list');
     for (let i = 1; i <= 18; i++) {
         const slide = document.createElement('li');
         slide.className = 'splide__slide';
-        
-        const avatarDiv = document.createElement('div');
-        avatarDiv.className = 'avatar-slide';
-        avatarDiv.dataset.avatarId = i;
-        
-        const img = document.createElement('img');
-        img.src = `./personajes/personaje${i}.png`;
-        img.className = 'avatar-img';
-        img.alt = `Personaje ${i}`;
-        
-        const span = document.createElement('span');
-        span.textContent = `Personaje ${i}`;
-        
-        avatarDiv.appendChild(img);
-        avatarDiv.appendChild(span);
-        slide.appendChild(avatarDiv);
+        slide.innerHTML = `
+            <div class="avatar-slide" data-avatar-id="${i}">
+                <img src="./personajes/personaje${i}.png" class="avatar-img" alt="Personaje ${i}">
+                <span>Personaje ${i}</span>
+            </div>`;
         avatarList.appendChild(slide);
     }
-    
-    new Splide('#avatar-carousel', {
-        perPage: 3,
-        gap: 10,
-        pagination: false,
-        arrows: true,
-        breakpoints: { 768: { perPage: 2 }, 576: { perPage: 1 } }
-    }).mount();
+    new Splide('#avatar-carousel', { perPage: 3, gap: 10, pagination: false }).mount();
 
-    // Global game state
     const gameState = {
         player: { x: 0, y: 0, direction: 'right', hasBall: false, avatarId: 1 },
-        ball: { x: 2, y: 4, visible: true },
+        ball: { x: 0, y: 0, visible: true },
         defenses: [],
         grid: { width: 10, height: 8 },
         goalArea: { x: 9, y: [3, 4] },
@@ -80,467 +39,436 @@ document.addEventListener('DOMContentLoaded', function() {
         speed: 5,
         playerName: 'Invitado',
         stepExecution: null,
-        stepState: null, // Holds state for step-by-step execution
-        highlightingEnabled: true
+        stepState: null,
+        highlightingEnabled: true,
+        lastHighlightedLine: null
     };
-    
 
-
-    // Level configurations
     const levels = [
-        { id: 1, title: "Tutorial: Recoge el balón", description: "Recoge el balón y llévalo hasta la portería.", playerStart: { x: 0, y: 4 }, ballPosition: { x: 2, y: 4 }, defenses: [], defenseSprite: 1, bestScore: 6 },
-        { id: 2, title: "Esquiva al defensor", description: "Hay un defensor bloqueando el camino directo. Busca una ruta alternativa.", playerStart: { x: 0, y: 3 }, ballPosition: { x: 1, y: 3 }, defenses: [{ x: 4, y: 3, spriteId: 2 }], defenseSprite: 2, bestScore: 10 },
-        { id: 3, title: "Pasa el balón", description: "Recoge el balón y déjalo en el centro del campo (5,4).", playerStart: { x: 0, y: 2 }, ballPosition: { x: 1, y: 2 }, defenses: [{ x: 3, y: 2 }, { x: 3, y: 3 }, { x: 3, y: 4 }], targetPosition: { x: 5, y: 4 }, bestScore: 12 }
+        { id: 1, title: "Tutorial: Recoge el balón", description: "Usa `avanzar()` y `recoger_balon()` para tomar el balón y llevarlo a la portería.", playerStart: { x: 0, y: 4 }, ballPosition: { x: 2, y: 4 }, defenses: []},
+        { id: 2, title: "Esquiva al defensor", description: "Hay un defensor. Usa `girar_izquierda()` y `avanzar()` para rodearlo.", playerStart: { x: 0, y: 3 }, ballPosition: { x: 1, y: 3 }, defenses: [{ x: 4, y: 3 }]},
+        { id: 3, title: "Usa Bucles", description: "Define una función con un bucle `for` para moverte varias casillas y evitar repetir código.", playerStart: { x: 0, y: 2 }, ballPosition: { x: 6, y: 2 }, defenses: [{ x: 3, y: 2 }, { x: 3, y: 3 }, { x: 3, y: 4 }]}
     ];
 
-    // DOM elements
-    const gameGrid = document.getElementById('game-grid');
-    const movesCounter = document.getElementById('moves-counter');
-    const currentLevelElement = document.getElementById('current-level');
-    const bestScoreElement = document.getElementById('best-score');
-    const missionTitle = document.getElementById('mission-title');
-    const missionDescription = document.getElementById('mission-description');
-    const runButton = document.getElementById('run-button');
-    const startButton = document.getElementById('start-button');
-    const stepButton = document.getElementById('step-button');
-    const stepSingleButton = document.getElementById('step-single-button');
-    const stopButton = document.getElementById('stop-button');
-    const speedSlider = document.getElementById('speed-slider');
-    const levelCompletePanel = document.getElementById('level-complete');
-    const movesUsedElement = document.getElementById('moves-used');
-    const recordMovesElement = document.getElementById('record-moves');
-    const betterPossibleElement = document.getElementById('better-possible');
-    const nextLevelButton = document.getElementById('next-level');
-    const resetCodeButton = document.getElementById('reset-code');
-    const playerForm = document.getElementById('player-form');
-    const playerNameInput = document.getElementById('player-name');
-    const userDisplayName = document.getElementById('user-display-name');
-    const profileButton = document.getElementById('profile-button');
-    const welcomeModal = new bootstrap.Modal(document.getElementById('welcomeModal'));
-    const helpButton = document.getElementById('help-button');
-    const helpModal = new bootstrap.Modal(document.getElementById('helpModal'));
-    const optimizeButton = document.getElementById('optimize-button');
-    const highlightToggle = document.getElementById('highlight-toggle');
-
-    // Load player data or show welcome modal
-    if (!localStorage.getItem('player')) {
-        welcomeModal.show();
-    } else {
-        const playerData = JSON.parse(localStorage.getItem('player'));
-        gameState.playerName = playerData.name;
-        gameState.player.avatarId = playerData.avatarId;
-        userDisplayName.textContent = playerData.name;
-        if (localStorage.getItem('bestScores')) {
-            gameState.bestScores = JSON.parse(localStorage.getItem('bestScores'));
-        }
-    }
+    // DOM Elements
+    const elements = {
+        gameGrid: document.getElementById('game-grid'),
+        movesCounter: document.getElementById('moves-counter'),
+        currentLevel: document.getElementById('current-level'),
+        bestScore: document.getElementById('best-score'),
+        missionTitle: document.getElementById('mission-title'),
+        missionDescription: document.getElementById('mission-description'),
+        runButton: document.getElementById('run-button'),
+        startButton: document.getElementById('start-button'),
+        stepSingleButton: document.getElementById('step-single-button'),
+        stopButton: document.getElementById('stop-button'),
+        speedSlider: document.getElementById('speed-slider'),
+        levelCompletePanel: document.getElementById('level-complete'),
+        movesUsed: document.getElementById('moves-used'),
+        recordMessage: document.getElementById('record-message'),
+        recordMoves: document.getElementById('record-moves'),
+        nextLevelButton: document.getElementById('next-level'),
+        resetCodeButton: document.getElementById('reset-code'),
+        playerForm: document.getElementById('player-form'),
+        playerNameInput: document.getElementById('player-name'),
+        userDisplayName: document.getElementById('user-display-name'),
+        profileButton: document.getElementById('profile-button'),
+        highlightToggle: document.getElementById('highlight-toggle'),
+        pythonConsole: document.getElementById('python-current-line'),
+        navInicio: document.getElementById('nav-inicio'),
+        navNiveles: document.getElementById('nav-niveles'),
+        navAyuda: document.getElementById('nav-ayuda')
+    };
     
+    const modals = {
+        welcome: new bootstrap.Modal(document.getElementById('welcomeModal')),
+        help: new bootstrap.Modal(document.getElementById('helpModal')),
+        levels: new bootstrap.Modal(document.getElementById('levelsModal'))
+    };
+
+    // --- Core Game Logic ---
     function initializeGrid() {
-        gameGrid.innerHTML = '';
+        elements.gameGrid.innerHTML = '';
         for (let y = 0; y < gameState.grid.height; y++) {
             for (let x = 0; x < gameState.grid.width; x++) {
                 const cell = document.createElement('div');
                 cell.className = 'grid-cell';
-                cell.dataset.x = x;
-                cell.dataset.y = y;
-                const coord = document.createElement('span');
-                coord.className = 'cell-coord';
-                coord.textContent = `(${x},${y})`;
-                cell.appendChild(coord);
+                cell.innerHTML = `<span class="cell-coord">(${x},${y})</span>`;
                 if (x === gameState.goalArea.x && gameState.goalArea.y.includes(y)) {
                     cell.classList.add('goal-cell');
                 }
-                gameGrid.appendChild(cell);
+                elements.gameGrid.appendChild(cell);
             }
         }
     }
     
     function loadLevel(levelId) {
-        stopExecution(); // Stop any ongoing execution
-        gameState.moves = 0;
-        gameState.player.hasBall = false;
+        stopExecution();
         const level = levels.find(l => l.id === levelId) || levels[0];
         gameState.currentLevel = level.id;
-        currentLevelElement.textContent = level.id;
-        missionTitle.textContent = `Misión: ${level.title}`;
-        missionDescription.textContent = level.description;
-        movesCounter.textContent = '0';
-        bestScoreElement.textContent = gameState.bestScores[level.id] || '-';
-        gameState.player.x = level.playerStart.x;
-        gameState.player.y = level.playerStart.y;
-        gameState.player.direction = 'right';
-        gameState.ball.x = level.ballPosition.x;
-        gameState.ball.y = level.ballPosition.y;
-        gameState.ball.visible = true;
-        gameState.defenses = [...level.defenses];
+        gameState.moves = 0;
+        gameState.player.hasBall = false;
+        Object.assign(gameState.player, level.playerStart, { direction: 'right' });
+        Object.assign(gameState.ball, level.ballPosition, { visible: true });
+        gameState.defenses = JSON.parse(JSON.stringify(level.defenses));
+
+        elements.currentLevel.textContent = level.id;
+        elements.missionTitle.textContent = `Misión: ${level.title}`;
+        elements.missionDescription.textContent = level.description;
+        elements.movesCounter.textContent = '0';
+        elements.bestScore.textContent = gameState.bestScores[level.id] || '-';
+        elements.levelCompletePanel.style.display = 'none';
+        
         updateGameDisplay();
-        levelCompletePanel.style.display = 'none';
     }
     
     function updateGameDisplay() {
-        document.querySelectorAll('.player, .ball, .defense').forEach(el => el.remove());
-        
-        // Place player
-        const playerCell = document.querySelector(`.grid-cell[data-x="${gameState.player.x}"][data-y="${gameState.player.y}"]`);
-        if (playerCell) {
-            const playerEl = document.createElement('div');
-            playerEl.className = 'player';
-            playerEl.style.backgroundImage = `url('./personajes/personaje${gameState.player.avatarId}.png')`;
-            let angle = 0;
-            if (gameState.player.direction === 'up') angle = -90;
-            if (gameState.player.direction === 'left') angle = 180;
-            if (gameState.player.direction === 'down') angle = 90;
-            playerEl.style.transform = `rotate(${angle}deg)`;
-            playerCell.appendChild(playerEl);
+        elements.gameGrid.querySelectorAll('.player, .ball, .defense').forEach(el => el.remove());
 
-            if (gameState.player.hasBall) {
-                const ballEl = document.createElement('div');
-                ballEl.className = 'ball in-possession'; // Use new class for positioning
-                playerEl.appendChild(ballEl);
-            }
-        }
-        
+        const playerEl = document.createElement('div');
+        playerEl.className = 'player';
+        playerEl.style.backgroundImage = `url('./personajes/personaje${gameState.player.avatarId}.png')`;
+        const angle = {'right': 0, 'up': -90, 'left': 180, 'down': 90}[gameState.player.direction];
+        playerEl.style.transform = `rotate(${angle}deg)`;
+        elements.gameGrid.children[gameState.player.y * gameState.grid.width + gameState.player.x].appendChild(playerEl);
+
         if (!gameState.player.hasBall && gameState.ball.visible) {
-            const ballCell = document.querySelector(`.grid-cell[data-x="${gameState.ball.x}"][data-y="${gameState.ball.y}"]`);
-            if (ballCell) {
-                const ballEl = document.createElement('div');
-                ballEl.className = 'ball';
-                ballCell.appendChild(ballEl);
-            }
+            const ballEl = document.createElement('div');
+            ballEl.className = 'ball';
+            elements.gameGrid.children[gameState.ball.y * gameState.grid.width + gameState.ball.x].appendChild(ballEl);
+        } else if (gameState.player.hasBall) {
+            const ballEl = document.createElement('div');
+            ballEl.className = 'ball in-possession';
+            playerEl.appendChild(ballEl);
         }
         
-        const currentLevel = levels.find(l => l.id === gameState.currentLevel);
-        const defaultDefenseSprite = currentLevel?.defenseSprite || 1;
-        gameState.defenses.forEach(defense => {
-            const defenseCell = document.querySelector(`.grid-cell[data-x="${defense.x}"][data-y="${defense.y}"]`);
-            if (defenseCell) {
-                const defenseEl = document.createElement('div');
-                defenseEl.className = 'defense';
-                const spriteId = defense.spriteId || defaultDefenseSprite;
-                defenseEl.style.backgroundImage = `url('./defensas/defensa${spriteId}.png')`;
-                defenseCell.appendChild(defenseEl);
-            }
+        gameState.defenses.forEach(d => {
+            const defenseEl = document.createElement('div');
+            defenseEl.className = 'defense';
+            defenseEl.style.backgroundImage = `url('./defensas/defensa${d.spriteId || 2}.png')`;
+            elements.gameGrid.children[d.y * gameState.grid.width + d.x].appendChild(defenseEl);
         });
-        
-        movesCounter.textContent = gameState.moves;
+
+        elements.movesCounter.textContent = gameState.moves;
     }
 
-    // Central function to stop any execution
+    // --- Execution Engine ---
+    const gameActions = {
+        avanzar: () => {
+            const { x: newX, y: newY } = gameActions.frente();
+            if (gameActions.frente_despejado()) {
+                gameState.player.x = newX;
+                gameState.player.y = newY;
+                gameState.moves++;
+            }
+        },
+        girar_izquierda: () => {
+            const dirs = ['right', 'up', 'left', 'down'];
+            gameState.player.direction = dirs[(dirs.indexOf(gameState.player.direction) + 1) % 4];
+            gameState.moves++;
+        },
+        recoger_balon: () => {
+            if (!gameState.player.hasBall && gameState.ball.visible && gameState.player.x === gameState.ball.x && gameState.player.y === gameState.ball.y) {
+                gameState.player.hasBall = true;
+                gameState.moves++;
+            }
+        },
+        soltar_balon: () => {
+            if (gameState.player.hasBall) {
+                gameState.player.hasBall = false;
+                Object.assign(gameState.ball, { x: gameState.player.x, y: gameState.player.y });
+                gameState.moves++;
+            }
+        },
+        frente: () => {
+            let { x, y, direction } = gameState.player;
+            if (direction === 'right') x++; else if (direction === 'left') x--;
+            else if (direction === 'up') y--; else if (direction === 'down') y++;
+            return {x, y};
+        },
+        frente_despejado: () => {
+            const { x: nx, y: ny } = gameActions.frente();
+            return nx >= 0 && nx < gameState.grid.width && ny >= 0 && ny < gameState.grid.height && !gameState.defenses.some(d => d.x === nx && d.y === ny);
+        },
+        tiene_balon: () => gameState.player.hasBall
+    };
+
+    // --- NEW PARSER AND EXECUTION LOGIC ---
+    function parseCode(code) {
+        const allLines = code.split('\n').map((text, i) => ({ text, num: i }));
+        const userFunctions = {};
+
+        function getIndent(line) { return line.text.match(/^\s*/)[0].length; }
+
+        function parseBlock(linesBlock) {
+            const commands = [];
+            let i = 0;
+            while (i < linesBlock.length) {
+                const line = linesBlock[i];
+                const trimmedLine = line.text.trim();
+                
+                if (trimmedLine === '' || trimmedLine.startsWith('#')) {
+                    i++;
+                    continue;
+                }
+
+                // **FOR LOOP PARSING**
+                const forMatch = trimmedLine.match(/^for\s+([a-zA-Z_][a-zA-Z0-9_]*)\s+in\s+range\((\d+)\):$/);
+                if (forMatch) {
+                    const varName = forMatch[1];
+                    const count = parseInt(forMatch[2], 10);
+                    const bodyLines = [];
+                    const forIndent = getIndent(line);
+                    let j = i + 1;
+                    while (j < linesBlock.length && getIndent(linesBlock[j]) > forIndent) {
+                        bodyLines.push(linesBlock[j]);
+                        j++;
+                    }
+                    commands.push({
+                        type: 'loop',
+                        count: count,
+                        varName: varName,
+                        body: parseBlock(bodyLines), // Recursively parse the loop's body
+                        lineNum: line.num
+                    });
+                    i = j; // Move index past the loop body
+                    continue;
+                }
+
+                commands.push({ type: 'command', text: trimmedLine, lineNum: line.num });
+                i++;
+            }
+            return commands;
+        }
+
+        // Find function definitions
+        for (let i = 0; i < allLines.length; i++) {
+            const line = allLines[i];
+            const defMatch = line.text.match(/^\s*def\s+([a-zA-Z0-9_]+)\s*\(\s*\):\s*$/);
+            if (defMatch) {
+                const funcName = defMatch[1];
+                const bodyLines = [];
+                const defIndent = getIndent(line);
+                let j = i + 1;
+                // Include subsequent lines that are either indented more than the def
+                // or blank lines that may appear before the first indented line.
+                while (j < allLines.length && (getIndent(allLines[j]) > defIndent || allLines[j].text.trim() === '')) {
+                    bodyLines.push(allLines[j]);
+                    j++;
+                }
+                userFunctions[funcName] = parseBlock(bodyLines);
+            }
+        }
+        
+        const mainLines = allLines.filter(line => !line.text.startsWith(' ') && !line.text.startsWith('#') && !line.text.trim().startsWith('def'));
+        userFunctions['__main__'] = parseBlock(mainLines);
+        
+        return userFunctions;
+    }
+    
+    function setupExecution() {
+        stopExecution();
+        loadLevel(gameState.currentLevel);
+        const code = editor.getValue();
+        const parsedFunctions = parseCode(code);
+        gameState.running = true;
+        gameState.stepState = {
+            functions: parsedFunctions,
+            callStack: [{
+                type: 'context',
+                name: '__main__',
+                pc: 0, // program counter for commands
+                commands: parsedFunctions['__main__'] || []
+            }],
+            lastCode: code
+        };
+    }
+
+    function executeStep() {
+        const state = gameState.stepState;
+        if (!state || state.callStack.length === 0) {
+            stopExecution(); return false;
+        }
+        
+        let context = state.callStack[state.callStack.length - 1];
+
+        if (context.pc >= context.commands.length) {
+            state.callStack.pop();
+            return executeStep(); // Context finished, continue in parent
+        }
+        
+        const command = context.commands[context.pc];
+        
+        clearHighlights();
+        if (gameState.highlightingEnabled) {
+            editor.addLineClass(command.lineNum, 'background', 'current-line-highlight');
+            gameState.lastHighlightedLine = command.lineNum;
+        }
+        elements.pythonConsole.textContent = command.type === 'command' ? command.text : `for i in range(${command.count}):`;
+
+        if (command.type === 'command') {
+            context.pc++;
+            const callMatch = command.text.match(/^([a-zA-Z0-9_]+)\s*\(\s*\)$/);
+            if (callMatch) {
+                const funcName = callMatch[1];
+                if (gameActions[funcName]) {
+                    gameActions[funcName]();
+                    updateGameDisplay();
+                } else if (state.functions[funcName]) {
+                    state.callStack.push({ type: 'context', name: funcName, pc: 0, commands: state.functions[funcName] });
+                }
+            }
+        } else if (command.type === 'loop') {
+            // If the loop context doesn't exist yet, create it
+            if (context.loopCounter === undefined) {
+                context.loopCounter = 0;
+            }
+            
+            if (context.loopCounter < command.count) {
+                context.loopCounter++;
+                // Push the loop body as a new context to execute
+                state.callStack.push({ type: 'context', name: `loop_iter_${context.loopCounter}`, pc: 0, commands: command.body });
+            } else {
+                // Loop finished, move to the next command
+                delete context.loopCounter;
+                context.pc++;
+                return executeStep(); // Process next command immediately
+            }
+        }
+        
+        checkCompletion();
+        return true;
+    }
+
     function stopExecution() {
         gameState.running = false;
         if (gameState.stepExecution) {
             clearInterval(gameState.stepExecution);
             gameState.stepExecution = null;
         }
-        // Clear highlights and reset step state
-        editor.operation(() => editor.getAllMarks().forEach(m => m.clear()));
-        const pythonConsole = document.getElementById('python-current-line');
-        if (pythonConsole) pythonConsole.textContent = '';
+        clearHighlights();
+        elements.pythonConsole.textContent = "";
         gameState.stepState = null;
     }
-    
-    // Game actions object
-    const gameActions = {
-        avanzar: function() {
-            let { x: newX, y: newY } = gameState.player;
-            if (gameState.player.direction === 'right') newX++;
-            else if (gameState.player.direction === 'left') newX--;
-            else if (gameState.player.direction === 'up') newY--;
-            else if (gameState.player.direction === 'down') newY++;
-            
-            if (newX >= 0 && newX < gameState.grid.width && newY >= 0 && newY < gameState.grid.height && !gameState.defenses.some(d => d.x === newX && d.y === newY)) {
-                gameState.player.x = newX;
-                gameState.player.y = newY;
-                gameState.moves++;
-                updateGameDisplay();
-                checkCompletion();
-            }
-        },
-        girar_izquierda: function() {
-            const directions = ['right', 'up', 'left', 'down'];
-            const currentIndex = directions.indexOf(gameState.player.direction);
-            gameState.player.direction = directions[(currentIndex + 1) % 4];
-            gameState.moves++;
-            updateGameDisplay();
-        },
-        recoger_balon: function() {
-            if (!gameState.player.hasBall && gameState.ball.visible && gameState.player.x === gameState.ball.x && gameState.player.y === gameState.ball.y) {
-                gameState.player.hasBall = true;
-                gameState.ball.visible = false;
-                gameState.moves++;
-                updateGameDisplay();
-            }
-        },
-        soltar_balon: function() {
-            if (gameState.player.hasBall) {
-                gameState.player.hasBall = false;
-                gameState.ball.visible = true;
-                gameState.ball.x = gameState.player.x;
-                gameState.ball.y = gameState.player.y;
-                gameState.moves++;
-                updateGameDisplay();
-                checkCompletion();
-            }
-        },
-        prepararStepByStep: function(code) {
-            const lines = code.split('\n');
-            const userFunctions = {};
-            let currentFunc = null, currentIndent = null;
-            
-            lines.forEach((rawLine, i) => {
-                const line = rawLine.trim();
-                const indent = rawLine.match(/^\s*/)[0].length;
-                if (/^def\s+(\w+)\s*\(.*\)\s*:\s*$/.test(line)) {
-                    currentFunc = line.match(/^def\s+(\w+)\s*\(.*\)\s*:\s*$/)[1];
-                    currentIndent = indent;
-                    userFunctions[currentFunc] = [];
-                } else if (currentFunc && indent > currentIndent) {
-                    userFunctions[currentFunc].push({ line: rawLine, lineNumber: i });
-                } else {
-                    currentFunc = null; currentIndent = null;
-                }
-            });
-            
-            const mainCommands = [];
-            let insideFunction = false, functionIndent = null;
-            lines.forEach((rawLine, i) => {
-                const line = rawLine.trim();
-                const indent = rawLine.match(/^\s*/)[0].length;
-                if (/^def\s+/.test(line)) {
-                    insideFunction = true;
-                    functionIndent = indent;
-                } else if (insideFunction && indent <= functionIndent) {
-                    insideFunction = false;
-                }
-                if (!insideFunction && line !== '' && !line.startsWith('#')) {
-                    mainCommands.push({ line, lineNumber: i });
-                }
-            });
 
-            const commands = [], lineMap = [];
-            const flattenActions = (bloque) => {
-                for (const { line: rawLine, lineNumber: ln } of bloque) {
-                    const l = rawLine.trim();
-                    if (l === '' || l.startsWith('#')) continue;
-                    
-                    if (l.includes('avanzar()')) { commands.push(this.avanzar); lineMap.push(ln); }
-                    else if (l.includes('girar_izquierda()')) { commands.push(this.girar_izquierda); lineMap.push(ln); }
-                    else if (l.includes('recoger_balon()')) { commands.push(this.recoger_balon); lineMap.push(ln); }
-                    else if (l.includes('soltar_balon()')) { commands.push(this.soltar_balon); lineMap.push(ln); }
-                    else if (l.includes('girar_derecha()')) {
-                        if (userFunctions['girar_derecha']) { flattenActions(userFunctions['girar_derecha']); }
-                        else {
-                            for(let i=0; i<3; i++) {
-                                commands.push(this.girar_izquierda); lineMap.push(ln);
-                            }
-                        }
-                    } else if (/^(\w+)\(\)/.test(l)) {
-                        const funcName = l.match(/^(\w+)\(\)/)[1];
-                        if (userFunctions[funcName]) {
-                            flattenActions(userFunctions[funcName]);
-                        }
-                    }
-                }
-            };
-            
-            flattenActions(mainCommands);
-            return { commands, lineMap, codeLines: lines };
+    function clearHighlights() {
+        if (gameState.lastHighlightedLine !== null) {
+            editor.removeLineClass(gameState.lastHighlightedLine, 'background', 'current-line-highlight');
+            gameState.lastHighlightedLine = null;
         }
-    };
-    
+    }
+
     function checkCompletion() {
-        const level = levels.find(l => l.id === gameState.currentLevel);
-        const isGoal = gameState.player.hasBall && gameState.player.x === gameState.goalArea.x && gameState.goalArea.y.includes(gameState.player.y);
-        const isTarget = level.targetPosition && (
-            (gameState.player.hasBall && gameState.player.x === level.targetPosition.x && gameState.player.y === level.targetPosition.y) ||
-            (!gameState.player.hasBall && gameState.ball.x === level.targetPosition.x && gameState.ball.y === level.targetPosition.y)
-        );
-
-        if (isGoal || isTarget) {
-            completeLevel();
-        }
-    }
-
-    function completeLevel() {
-        stopExecution();
-        const playerEl = document.querySelector('.player');
-        if (playerEl) playerEl.classList.add('celebration');
-        
-        if (!gameState.bestScores[gameState.currentLevel] || gameState.moves < gameState.bestScores[gameState.currentLevel]) {
-            gameState.bestScores[gameState.currentLevel] = gameState.moves;
-            localStorage.setItem('bestScores', JSON.stringify(gameState.bestScores));
-        }
-        
-        movesUsedElement.textContent = gameState.moves;
-        recordMovesElement.textContent = gameState.bestScores[gameState.currentLevel];
-        const currentLevel = levels.find(l => l.id === gameState.currentLevel);
-        betterPossibleElement.style.display = (gameState.moves <= currentLevel.bestScore) ? 'none' : 'block';
-        
-        setTimeout(() => { levelCompletePanel.style.display = 'block'; }, 1000);
-    }
-    
-    function executeStep() {
-    if (!gameState.stepState || gameState.stepState.index >= gameState.stepState.commands.length) {
-        stopExecution();
-        checkCompletion();
-        return false;
-    }
-
-    const step = gameState.stepState;
-    const lineNumber = step.lineMap[step.index];
-    const pythonConsole = document.getElementById('python-current-line');
-    
-    // ** MODIFICACIÓN AQUÍ: Añade el if **
-    if (gameState.highlightingEnabled) {
-        editor.operation(() => {
-            editor.getAllMarks().forEach(m => m.clear());
-            if (typeof lineNumber === 'number') {
-                editor.addLineClass(lineNumber, 'background', 'current-line-highlight');
-                pythonConsole.textContent = step.codeLines[lineNumber].trim();
-            } else {
-                pythonConsole.textContent = '';
+        if (gameState.player.hasBall && gameState.player.x === gameState.goalArea.x && gameState.goalArea.y.includes(gameState.player.y)) {
+            const playerEl = document.querySelector('.player');
+            if(playerEl) playerEl.classList.add('celebration');
+            stopExecution();
+            
+            const isNewBest = !gameState.bestScores[gameState.currentLevel] || gameState.moves < gameState.bestScores[gameState.currentLevel];
+            if (isNewBest) {
+                gameState.bestScores[gameState.currentLevel] = gameState.moves;
+                localStorage.setItem('bestScores', JSON.stringify(gameState.bestScores));
             }
-        });
-    } else { // Si está desactivado, solo actualiza la consola sin resaltar
-        if (typeof lineNumber === 'number') {
-            pythonConsole.textContent = step.codeLines[lineNumber].trim();
-        } else {
-            pythonConsole.textContent = '';
+            elements.movesUsed.textContent = gameState.moves;
+            elements.recordMoves.textContent = gameState.bestScores[gameState.currentLevel];
+            elements.recordMessage.textContent = isNewBest ? "¡Nuevo Récord!" : `Tu récord es ${gameState.bestScores[gameState.currentLevel]} movimientos.`;
+
+            setTimeout(() => { elements.levelCompletePanel.style.display = 'block'; }, 1000);
         }
     }
-    
-    step.commands[step.index]();
-    step.index++;
-    return true;
-}
 
-
-    // Event Listeners
-    runButton.addEventListener('click', () => {
-        stopExecution();
-        loadLevel(gameState.currentLevel);
-        gameState.running = true;
-        const code = editor.getValue();
-        const { commands, lineMap, codeLines } = gameActions.prepararStepByStep(code);
-        
-        gameState.stepState = { commands, lineMap, codeLines, index: 0, lastCode: code };
-        
+    // --- Event Listeners ---
+    elements.runButton.addEventListener('click', () => {
+        setupExecution();
         gameState.stepExecution = setInterval(() => {
-            if (!executeStep()) {
+            if (!gameState.running || !executeStep()) {
                 stopExecution();
             }
         }, 1000 / gameState.speed);
     });
 
-    startButton.addEventListener('click', () => {
-        stopExecution();
-        loadLevel(gameState.currentLevel);
-    });
-    
-    stepButton.addEventListener('click', () => { // "Paso a Paso"
-        stopExecution();
-        loadLevel(gameState.currentLevel);
-        gameState.running = true;
-        const code = editor.getValue();
-        gameState.stepState = gameActions.prepararStepByStep(code);
-        gameState.stepState.index = 0;
-        
-        gameState.stepExecution = setInterval(() => {
-            if (!executeStep()) {
-                stopExecution();
-            }
-        }, 1000 / gameState.speed);
-    });
-    
-    stepSingleButton.addEventListener('click', () => { // "Ejecutar Siguiente"
+    elements.stepSingleButton.addEventListener('click', () => {
         if (gameState.stepExecution) clearInterval(gameState.stepExecution);
         gameState.running = false;
-
-        const code = editor.getValue();
-        if (!gameState.stepState || gameState.stepState.lastCode !== code) {
-            loadLevel(gameState.currentLevel);
-            gameState.stepState = gameActions.prepararStepByStep(code);
-            gameState.stepState.index = 0;
-            gameState.stepState.lastCode = code;
+        if (!gameState.stepState || gameState.stepState.lastCode !== editor.getValue()) {
+            setupExecution();
         }
         executeStep();
     });
 
-    stopButton.addEventListener('click', stopExecution);
+    elements.stopButton.addEventListener('click', stopExecution);
+    elements.startButton.addEventListener('click', () => loadLevel(gameState.currentLevel));
+    elements.speedSlider.addEventListener('input', e => { gameState.speed = parseInt(e.target.value, 10); });
     
-    speedSlider.addEventListener('input', (e) => { gameState.speed = parseInt(e.target.value); });
-    
-    nextLevelButton.addEventListener('click', () => {
-        const nextLevelId = gameState.currentLevel + 1;
-        if (nextLevelId <= levels.length) {
-            loadLevel(nextLevelId);
-        } else {
-            alert("¡Has completado todos los niveles disponibles!");
-        }
-    });
-    
-    resetCodeButton.addEventListener('click', () => {
-        if (confirm("¿Estás seguro de reiniciar el código? Perderás todos los cambios.")) {
-            editor.setValue(`# Usa estas funciones para mover al jugador:\n# avanzar() - Mueve al jugador una casilla en la dirección que mira\n# girar_izquierda() - Gira al jugador 90 grados a la izquierda\n# recoger_balon() - Recoge el balón si está en la misma casilla\n# soltar_balon() - Suelta el balón en la casilla actual\n\n# Puedes crear tus propias funciones, como esta:\ndef girar_derecha():\n    girar_izquierda()\n    girar_izquierda()\n    girar_izquierda()\n\n# Función principal - Todo comienza aquí\ndef main():\n    avanzar()\n    avanzar()\n    recoger_balon()\n    girar_derecha()\n    avanzar()\n    soltar_balon()\n\n# Llamada a la función principal\nmain()`);
-        }
-    });
-    
-    playerForm.addEventListener('submit', (e) => {
+    elements.navInicio.addEventListener('click', (e) => { e.preventDefault(); loadLevel(1); });
+    elements.navAyuda.addEventListener('click', (e) => { e.preventDefault(); modals.help.show(); });
+    elements.navNiveles.addEventListener('click', (e) => {
         e.preventDefault();
-        const playerName = playerNameInput.value || 'Jugador';
-        const selectedAvatarEl = document.querySelector('.avatar-slide.selected');
-        const avatarId = selectedAvatarEl ? parseInt(selectedAvatarEl.dataset.avatarId) : 1;
-        
-        const playerData = { name: playerName, avatarId: avatarId };
-        localStorage.setItem('player', JSON.stringify(playerData));
-        
-        gameState.playerName = playerName;
-        gameState.player.avatarId = avatarId;
-        userDisplayName.textContent = playerName;
-        
-        welcomeModal.hide();
-        loadLevel(gameState.currentLevel);
-    });
-    
-    document.querySelectorAll('.avatar-slide').forEach(slide => {
-        slide.addEventListener('click', () => {
-            document.querySelectorAll('.avatar-slide').forEach(s => s.classList.remove('selected'));
-            slide.classList.add('selected');
+        const list = document.getElementById('levels-list');
+        list.innerHTML = '';
+        levels.forEach(level => {
+            const btn = document.createElement('button');
+            btn.className = 'btn btn-outline-primary w-100 mb-2';
+            btn.textContent = `Nivel ${level.id}: ${level.title}`;
+            btn.onclick = () => {
+                loadLevel(level.id);
+                modals.levels.hide();
+            };
+            list.appendChild(btn);
         });
+        modals.levels.show();
     });
 
-    profileButton.addEventListener('click', () => welcomeModal.show());
-    helpButton.addEventListener('click', () => helpModal.show());
-   
-        highlightToggle.addEventListener('input', () => {
-        gameState.highlightingEnabled = highlightToggle.checked;
-        if (!highlightToggle.checked) {
-            // Si se desactiva, limpia cualquier resaltado existente
-            editor.operation(() => editor.getAllMarks().forEach(m => m.clear()));
+    elements.nextLevelButton.addEventListener('click', () => {
+        const nextId = gameState.currentLevel + 1;
+        if (nextId <= levels.length) {
+            loadLevel(nextId);
+        } else {
+            alert("¡Has completado todos los niveles!");
         }
     });
-    
+
+    elements.resetCodeButton.addEventListener('click', () => {
+        editor.setValue(`# ¡Bienvenido al Nivel ${gameState.currentLevel}!\n# Misión: ${levels.find(l=>l.id===gameState.currentLevel).description}\n\n# ---- Funciones Disponibles ----\n# avanzar(), girar_izquierda(), recoger_balon(), soltar_balon()\n# frente_despejado(), tiene_balon()\n\ndef main():\n    # Escribe tu código aquí\n    \n\n\n# No modifiques la línea de abajo\nmain()`);
+    });
+
+    elements.playerForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const name = elements.playerNameInput.value || 'Jugador';
+        const avatarId = document.querySelector('.avatar-slide.selected')?.dataset.avatarId || 1;
+        const playerData = { name, avatarId: parseInt(avatarId) };
+        localStorage.setItem('player', JSON.stringify(playerData));
+        Object.assign(gameState, { playerName: name, player: {...gameState.player, avatarId: parseInt(avatarId) }});
+        elements.userDisplayName.textContent = name;
+        modals.welcome.hide();
+        loadLevel(gameState.currentLevel);
+    });
+
+    document.getElementById('avatar-list').addEventListener('click', (e) => {
+        const slide = e.target.closest('.avatar-slide');
+        if (slide) {
+            document.querySelectorAll('.avatar-slide').forEach(s => s.classList.remove('selected'));
+            slide.classList.add('selected');
+        }
+    });
+
+    elements.profileButton.addEventListener('click', () => modals.welcome.show());
+    elements.highlightToggle.addEventListener('change', () => {
+        gameState.highlightingEnabled = elements.highlightToggle.checked;
+        if (!gameState.highlightingEnabled) clearHighlights();
+    });
+
+    // --- Initial Load ---
+    if (localStorage.getItem('player')) {
+        const playerData = JSON.parse(localStorage.getItem('player'));
+        gameState.playerName = playerData.name;
+        gameState.player.avatarId = playerData.avatarId;
+        elements.userDisplayName.textContent = playerData.name;
+        gameState.bestScores = JSON.parse(localStorage.getItem('bestScores') || '{}');
+        initializeGrid();
+        loadLevel(gameState.currentLevel);
+    } else {
+        modals.welcome.show();
+    }
     document.querySelector('.avatar-slide[data-avatar-id="1"]').classList.add('selected');
-    
-    // Initialize game
-    initializeGrid();
-    loadLevel(gameState.currentLevel);
-   
-    optimizeButton.addEventListener('click', async () => {
-        if (gameState.running) return;
-        const code = editor.getValue();
-        const level = gameState.currentLevel;
-        try {
-            const resp = await fetch('https://magicloops.dev/api/loop/b594c94d-6ede-4b56-b321-a062fa8dd301/run', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ code, level })
-            });
-            const result = await resp.json();
-            alert(`Original Moves: ${result.originalMoves}\nOptimized Moves: ${result.optimizedMoves}\n\nSugerencias:\n- ${result.suggestions.join('\n- ')}`);
-        } catch (err) {
-            console.error('Error al llamar a MoveOptimizer:', err);
-            alert('No se pudo obtener optimización. Revisa la consola.');
-        }
-    });
 });

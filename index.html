@@ -13,10 +13,9 @@
 
 </head>
 <body>
-  <!-- Navbar -->
   <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
     <div class="container-fluid">
-      <a class="navbar-brand" href="javascript:void(0)">
+      <a class="navbar-brand" href="#">
         <i class="fas fa-futbol me-2"></i>Python Soccer Code
       </a>
       <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
@@ -25,31 +24,26 @@
       <div class="collapse navbar-collapse" id="navbarNav">
         <ul class="navbar-nav me-auto">
           <li class="nav-item">
-            <a class="nav-link" href="javascript:void(0)">Inicio</a>
+            <a class="nav-link" href="#" id="nav-inicio">Inicio</a>
           </li>
           <li class="nav-item">
-            <a class="nav-link" href="javascript:void(0)">Niveles</a>
+            <a class="nav-link" href="#" id="nav-niveles">Niveles</a>
           </li>
           <li class="nav-item">
-            <a class="nav-link" href="javascript:void(0)">Ayuda</a>
+            <a class="nav-link" href="#" id="nav-ayuda">Ayuda</a>
           </li>
         </ul>
         <div class="d-flex">
           <button id="profile-button" class="btn btn-outline-light me-2" type="button">
             <i class="fas fa-user me-1"></i><span id="user-display-name">Invitado</span>
           </button>
-          <button id="settings-button" class="btn btn-outline-light" type="button">
-            <i class="fas fa-cog"></i>
-          </button>
         </div>
       </div>
     </div>
   </nav>
 
-  <!-- Main Content Area -->
   <div class="container-fluid app-container">
     <div class="row h-100">
-      <!-- Python Code Editor (Left Side) -->
       <div class="col-md-6 p-3">
         <div class="code-editor">
           <div class="d-flex justify-content-between mb-2">
@@ -58,96 +52,76 @@
               <button id="reset-code" class="btn btn-sm btn-outline-secondary">
                 <i class="fas fa-undo"></i> Reiniciar
               </button>
-              <button id="help-button" class="btn btn-sm btn-outline-info ms-1">
-                <i class="fas fa-question-circle"></i> Ayuda
-              </button>
             </div>
-          </div>
-          
-          <div class="function-tooltip">
-            <strong>Funciones disponibles:</strong> avanzar(), girar_izquierda(), recoger_balon(), soltar_balon()
           </div>
           
           <textarea id="code-editor">
-# Usa estas funciones para mover al jugador:
-# avanzar() - Mueve al jugador una casilla en la dirección que mira
-# girar_izquierda() - Gira al jugador 90 grados a la izquierda
-# recoger_balon() - Recoge el balón si está en la misma casilla
-# soltar_balon() - Suelta el balón en la casilla actual
+# ¡Bienvenido al Nivel 1!
+# Tu misión es recoger el balón y marcar un gol.
 
-# Puedes crear tus propias funciones, como esta:
-def girar_derecha():
-    girar_izquierda()
-    girar_izquierda()
-    girar_izquierda()
+# ---- Funciones Disponibles ----
+# avanzar()
+# girar_izquierda()
+# recoger_balon()
+# soltar_balon()
 
-# Función principal - Todo comienza aquí
+# ---- Funciones de Condición (para if/while) ----
+# frente_despejado()
+# tiene_balon()
+
+# ---- Estructura Principal ----
+# Escribe tu código dentro de la función main()
 def main():
+    # Escribe tu código aquí
     avanzar()
     avanzar()
     recoger_balon()
-    girar_derecha()
-    avanzar()
-    soltar_balon()
 
-# Llamada a la función principal
+
+# No modifiques la línea de abajo
 main()
           </textarea>
-          
-          <div class="python-console-sim mb-2" id="python-console-sim" style="background:#222;color:#fff;padding:8px 12px;border-radius:6px;font-family:monospace;font-size:1em;min-height:2em;">
-            <span style="color:#aaa">Consola Python:</span>
+
+          <div class="python-console-sim mb-2" style="border: 10px solid #ccc; padding: 10px; border-radius: 5px;">
+            <span>Consola Python:</span>
             <span id="python-current-line"></span>
           </div>
+          
           <div class="controls mt-3">
-
-
-
-        <div class="controls mt-3">
-        <div class="row align-items-center">
-            <div class="col-md-12 mb-2">
-            <div class="btn-group">
-                <button id="run-button" class="btn btn-primary">
-                <i class="fas fa-play me-1"></i> Ejecutar
-                </button>
-                <button id="start-button" class="btn btn-primary ms-1">
-                <i class="fas fa-play-circle me-1"></i> Inicio
-                </button>
-                <button id="step-button" class="btn btn-secondary">
-                <i class="fas fa-shoe-prints me-1"></i> Paso a Paso
-                </button>
-                <button id="step-single-button" class="btn btn-warning ms-1">
-                <i class="fas fa-shoe-prints me-1"></i> Paso a Paso
-                </button>
-                <button id="stop-button" class="btn btn-danger">
-                <i class="fas fa-stop me-1"></i> Detener
-                </button>
-                <button id="optimize-button" class="btn btn-success">
-                <i class="fas fa-bolt me-1"></i> Optimizar
-                </button>
+            <div class="row align-items-center">
+              <div class="col-12 mb-2">
+                <div class="btn-group w-100">
+                    <button id="run-button" class="btn btn-primary" title="Ejecutar rápido con animación">
+                      <i class="fas fa-play me-1"></i> Ejecutar
+                    </button>
+                    <button id="step-single-button" class="btn btn-warning" title="Ejecutar el siguiente paso">
+                      <i class="fas fa-shoe-prints me-1"></i> Siguiente Paso
+                    </button>
+                    <button id="stop-button" class="btn btn-danger" title="Detener la ejecución">
+                      <i class="fas fa-stop me-1"></i> Detener
+                    </button>
+                     <button id="start-button" class="btn btn-secondary" title="Reiniciar el estado del nivel">
+                      <i class="fas fa-redo-alt me-1"></i> Reiniciar Nivel
+                    </button>
+                </div>
+              </div>
             </div>
+            <div class="row align-items-center mt-2">
+              <div class="col-md-8">
+                <label for="speed-slider" class="form-label mb-0">Velocidad:</label>
+                <input type="range" class="form-range" id="speed-slider" min="1" max="10" value="5">
+              </div>
+              <div class="col-md-4">
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" role="switch" id="highlight-toggle" checked>
+                    <label class="form-check-label" for="highlight-toggle">Resaltar Línea</label>
+                </div>
+              </div>
             </div>
-        </div>
-        <div class="row align-items-center mt-2">
-            <div class="col-md-8">
-            <label for="speed-slider" class="form-label mb-0">Velocidad:</label>
-            <input type="range" class="form-range" id="speed-slider" min="1" max="10" value="5">
-            </div>
-            <div class="col-md-4">
-            <div class="form-check form-switch">
-                <input class="form-check-input" type="checkbox" role="switch" id="highlight-toggle" checked>
-                <label class="form-check-label" for="highlight-toggle">Activar Sombra</label>
-            </div>
-            </div>
-        </div>
-        </div>
-
-
-
           </div>
         </div>
       </div>
       
-      <!-- Soccer Field Grid (Right Side) -->
       <div class="col-md-6 p-3">
         <div class="score-panel d-flex justify-content-between">
           <div>
@@ -160,109 +134,142 @@ main()
         </div>
         
         <div class="soccer-field">
-          <div class="grid-container" id="game-grid">
-            <!-- Grid cells will be generated here -->
-          </div>
+          <div class="grid-container" id="game-grid"></div>
           <div class="level-complete" id="level-complete">
             <h3 class="text-success"><i class="fas fa-trophy me-2"></i>¡Nivel Completado!</h3>
             <p>Has usado <span id="moves-used">0</span> movimientos.</p>
-            <p id="better-possible" class="text-warning">¡Puedes hacerlo mejor! El récord es <span id="record-moves">0</span> movimientos.</p>
+            <p id="record-message">Tu récord es de <span id="record-moves">0</span> movimientos.</p>
             <button id="next-level" class="btn btn-primary mt-2">Siguiente Nivel</button>
           </div>
         </div>
         
         <div class="instruction-box mt-3">
-          <h5 id="mission-title">Misión: Nivel 1</h5>
-          <p id="mission-description">Recoge el balón y llévalo hasta el área de gol en el menor número de movimientos posibles.</p>
+          <h5 id="mission-title">Misión</h5>
+          <p id="mission-description">Descripción de la misión.</p>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Welcome Modal with Player Profile Creation -->
-  <div class="modal fade welcome-modal" id="welcomeModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+  <div class="modal fade" id="welcomeModal" data-bs-backdrop="static" tabindex="-1">
     <div class="modal-dialog modal-lg">
       <div class="modal-content">
         <div class="modal-header">
           <h5 class="modal-title"><i class="fas fa-futbol me-2"></i>¡Bienvenido a Python Soccer Code!</h5>
         </div>
         <div class="modal-body">
-          <div class="container-fluid">
-            <div class="row">
-              <div class="col-12">
-                <p class="lead">Aprende Python mientras llevas a tu jugador a la victoria.</p>
-                <form id="player-form">
-                  <div class="mb-3">
-                    <label for="player-name" class="form-label">Nombre del Jugador:</label>
-                    <input type="text" class="form-control" id="player-name" placeholder="Ingresa tu nombre" required>
-                  </div>
-                  
-                  <div class="mb-3">
-                    <label class="form-label">Selecciona tu Avatar:</label>
-                    <div class="splide" id="avatar-carousel">
-                      <div class="splide__track">
-                        <ul class="splide__list" id="avatar-list">
-                          <!-- Character slots will be generated dynamically -->
-                        </ul>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div class="d-grid">
-                    <button type="submit" class="btn btn-primary">¡Comenzar a Jugar!</button>
-                  </div>
-                </form>
+            <p class="lead">Aprende a programar en Python resolviendo desafíos de fútbol.</p>
+            <form id="player-form">
+              <div class="mb-3">
+                <label for="player-name" class="form-label">Tu Nombre:</label>
+                <input type="text" class="form-control" id="player-name" required>
               </div>
-            </div>
-          </div>
+              <div class="mb-3">
+                <label class="form-label">Selecciona tu Avatar:</label>
+                <div id="avatar-carousel" class="splide">
+                  <div class="splide__track">
+                        <ul class="splide__list" id="avatar-list"></ul>
+                  </div>
+                </div>
+              </div>
+              <button type="submit" class="btn btn-primary w-100">¡Empezar a Jugar!</button>
+            </form>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Help Modal -->
-  <div class="modal fade" id="helpModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
+  <div class="modal fade" id="helpModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
       <div class="modal-content">
         <div class="modal-header bg-info text-white">
-          <h5 class="modal-title"><i class="fas fa-question-circle me-2"></i>Ayuda</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          <h5 class="modal-title"><i class="fas fa-question-circle me-2"></i>Guía Completa</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
         </div>
         <div class="modal-body">
-          <h6>Funciones Disponibles:</h6>
-          <ul class="list-group mb-3">
-            <li class="list-group-item"><code>avanzar()</code> - Mueve al jugador una casilla en la dirección actual</li>
-            <li class="list-group-item"><code>girar_izquierda()</code> - Gira al jugador 90° a la izquierda</li>
-            <li class="list-group-item"><code>recoger_balon()</code> - Recoge el balón si está en la misma casilla</li>
-            <li class="list-group-item"><code>soltar_balon()</code> - Deja el balón en la casilla actual</li>
-          </ul>
-          
-          <h6>Consejos:</h6>
-          <ul>
-            <li>Puedes crear tu propia función <code>girar_derecha()</code> usando tres <code>girar_izquierda()</code></li>
-            <li>Utiliza bucles para repetir acciones</li>
-            <li>Usa condicionales para tomar decisiones</li>
-          </ul>
-          
-          <h6>Ejemplos:</h6>
-          <pre class="bg-light p-2 rounded"><code>
-def avanzar_tres():
+            <div class="row">
+                <div class="col-md-4">
+                    <h6><i class="fas fa-gamepad me-2"></i>El Objetivo</h6>
+                    <p>Tu meta es escribir código Python en el editor de la izquierda para guiar a tu jugador a completar la misión de cada nivel en el campo de la derecha.</p>
+                    <h6><i class="fas fa-cogs me-2"></i>Controles de Ejecución</h6>
+                    <ul>
+                        <li><strong>Ejecutar:</strong> Corre tu código de principio a fin con una animación visual.</li>
+                        <li><strong>Siguiente Paso:</strong> Ejecuta solo una línea de tu código. Ideal para depurar y ver el flujo exacto.</li>
+                        <li><strong>Detener:</strong> Para cualquier ejecución en curso.</li>
+                        <li><strong>Reiniciar Nivel:</strong> Devuelve al jugador y al balón a sus posiciones iniciales sin cambiar tu código.</li>
+                    </ul>
+                </div>
+                <div class="col-md-8">
+                    <h6><i class="fas fa-code me-2"></i>Comandos de Programación</h6>
+                    <p>Estos son los bloques de construcción de tu programa.</p>
+                    <nav>
+                      <div class="nav nav-tabs" id="nav-tab" role="tablist">
+                        <button class="nav-link active" id="nav-actions-tab" data-bs-toggle="tab" data-bs-target="#nav-actions" type="button">Acciones</button>
+                        <button class="nav-link" id="nav-conditions-tab" data-bs-toggle="tab" data-bs-target="#nav-conditions" type="button">Condiciones</button>
+                        <button class="nav-link" id="nav-structures-tab" data-bs-toggle="tab" data-bs-target="#nav-structures" type="button">Estructuras</button>
+                      </div>
+                    </nav>
+                    <div class="tab-content p-3 border border-top-0 rounded-bottom" id="nav-tabContent">
+                      <div class="tab-pane fade show active" id="nav-actions" role="tabpanel">
+                        <p>Las acciones hacen que tu jugador haga algo en el campo.</p>
+                        <code>avanzar()</code><span class="text-muted"> - Mueve al jugador una casilla hacia adelante.</span><br>
+                        <code>girar_izquierda()</code><span class="text-muted"> - Gira al jugador 90° a la izquierda.</span><br>
+                        <code>recoger_balon()</code><span class="text-muted"> - Toma el balón si está en la misma casilla.</span><br>
+                        <code>soltar_balon()</code><span class="text-muted"> - Deja el balón en la casilla actual.</span>
+                        <hr>
+                        <p class="fw-bold">Consejo:</p>
+                        <pre class="bg-light p-2 rounded"><code># Puedes crear nuevas funciones combinando otras.
+def girar_derecha():
+    girar_izquierda()
+    girar_izquierda()
+    girar_izquierda()</code></pre>
+                      </div>
+                      <div class="tab-pane fade" id="nav-conditions" role="tabpanel">
+                        <p>Las condiciones te permiten hacer preguntas para tomar decisiones con <code>if</code> o <code>while</code>.</p>
+                        <code>frente_despejado()</code><span class="text-muted"> - Devuelve `True` (verdadero) si no hay un obstáculo en frente.</span><br>
+                        <code>tiene_balon()</code><span class="text-muted"> - Devuelve `True` si tu jugador ya tiene el balón.</span><br>
+                         <hr>
+                        <p class="fw-bold">Ejemplo de uso:</p>
+                        <pre class="bg-light p-2 rounded"><code># Solo avanza si el camino está libre.
+if frente_despejado():
     avanzar()
-    avanzar()
-    avanzar()
-    
-# Bucle para avanzar 5 veces
-for i in range(5):
+else:
+    # Si no, gira.
+    girar_izquierda()</code></pre>
+                      </div>
+                      <div class="tab-pane fade" id="nav-structures" role="tabpanel">
+                        <p>Usa bucles para repetir acciones y condicionales para crear programas inteligentes.</p>
+                        <strong>Bucle <code>for</code> (repetir N veces):</strong>
+                        <pre class="bg-light p-2 rounded"><code># Esta función hace que el jugador avance 4 veces.
+def avanzar_cuatro_casillas():
+    for i in range(4):
+        avanzar()</code></pre>
+                        <strong>Bucle <code>while</code> (repetir mientras algo sea verdad):</strong>
+                         <pre class="bg-light p-2 rounded"><code># Avanza sin parar hasta que encuentre un obstáculo.
+while frente_despejado():
     avanzar()</code></pre>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                      </div>
+                    </div>
+                </div>
+            </div>
         </div>
       </div>
     </div>
   </div>
+
+  <div class="modal fade" id="levelsModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Seleccionar Nivel</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="levels-list">
+                </div>
+        </div>
+    </div>
+  </div>
   
-  <!-- External JS Libraries -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.13/lib/codemirror.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.13/mode/python/python.min.js"></script>

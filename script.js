@@ -47,7 +47,17 @@ document.addEventListener('DOMContentLoaded', function() {
     const levels = [
         { id: 1, title: "Tutorial: Recoge el balón", description: "Usa `avanzar()` y `recoger_balon()` para tomar el balón y llevarlo a la portería.", playerStart: { x: 0, y: 4 }, ballPosition: { x: 2, y: 4 }, defenses: []},
         { id: 2, title: "Esquiva al defensor", description: "Hay un defensor. Usa `girar_izquierda()` y `avanzar()` para rodearlo.", playerStart: { x: 0, y: 3 }, ballPosition: { x: 1, y: 3 }, defenses: [{ x: 4, y: 3 }]},
-        { id: 3, title: "Usa Bucles", description: "Define una función con un bucle `for` para moverte varias casillas y evitar repetir código.", playerStart: { x: 0, y: 2 }, ballPosition: { x: 6, y: 2 }, defenses: [{ x: 3, y: 2 }, { x: 3, y: 3 }, { x: 3, y: 4 }]}
+        { id: 3, title: "Usa Bucles", description: "Define una función con un bucle `for` para moverte varias casillas y evitar repetir código.", playerStart: { x: 0, y: 2 }, ballPosition: { x: 6, y: 2 }, defenses: [{ x: 3, y: 2 }, { x: 3, y: 3 }, { x: 3, y: 4 }]},
+        // Nuevos niveles
+        { id: 4, title: "Doble marca", description: "Esquiva varios defensores, recoge el balón y entrégalo al compañero cerca del área antes de agotar los movimientos (máx 14).", playerStart: { x: 0, y: 4 }, ballPosition: { x: 1, y: 4 }, defenses: [
+            { x: 3, y: 2 }, { x: 3, y: 3 }, { x: 3, y: 4 }, { x: 5, y: 3 }, { x: 6, y: 4 }
+        ], teammate: { x: 8, y: 3, spriteId: 15 }, target: { x: 8, y: 3 }, maxMoves: 14 },
+        { id: 5, title: "Embudo defensivo", description: "Lleva el balón a tu compañero en el carril derecho. Planifica bien las vueltas (máx 16 movimientos).", playerStart: { x: 0, y: 2 }, ballPosition: { x: 2, y: 2 }, defenses: [
+            { x: 4, y: 1 }, { x: 4, y: 2 }, { x: 4, y: 3 }, { x: 6, y: 2 }, { x: 7, y: 2 }, { x: 7, y: 3 }
+        ], teammate: { x: 8, y: 2, spriteId: 16 }, target: { x: 8, y: 2 }, maxMoves: 16 },
+        { id: 6, title: "Pases milimétricos", description: "Entre líneas: evita la muralla y entrega el balón a tu compañero (máx 18 movimientos).", playerStart: { x: 1, y: 5 }, ballPosition: { x: 2, y: 5 }, defenses: [
+            { x: 4, y: 4 }, { x: 4, y: 5 }, { x: 4, y: 6 }, { x: 5, y: 4 }, { x: 6, y: 5 }, { x: 7, y: 4 }, { x: 7, y: 6 }
+        ], teammate: { x: 8, y: 4, spriteId: 14 }, target: { x: 8, y: 4 }, maxMoves: 18 }
     ];
 
     // DOM Elements
@@ -77,7 +87,8 @@ document.addEventListener('DOMContentLoaded', function() {
         pythonConsole: document.getElementById('python-current-line'),
         navInicio: document.getElementById('nav-inicio'),
         navNiveles: document.getElementById('nav-niveles'),
-        navAyuda: document.getElementById('nav-ayuda')
+        navAyuda: document.getElementById('nav-ayuda'),
+        navLevelsDropdown: document.getElementById('nav-levels-dropdown')
     };
     
     const modals = {
@@ -110,7 +121,10 @@ document.addEventListener('DOMContentLoaded', function() {
         gameState.player.hasBall = false;
         Object.assign(gameState.player, level.playerStart, { direction: 'right' });
         Object.assign(gameState.ball, level.ballPosition, { visible: true });
-        gameState.defenses = JSON.parse(JSON.stringify(level.defenses));
+    gameState.defenses = JSON.parse(JSON.stringify(level.defenses));
+    gameState.teammate = level.teammate ? { ...level.teammate } : null;
+    gameState.target = level.target ? { ...level.target } : null;
+    gameState.maxMoves = level.maxMoves || null;
 
         elements.currentLevel.textContent = level.id;
         elements.missionTitle.textContent = `Misión: ${level.title}`;
@@ -123,7 +137,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function updateGameDisplay() {
-        elements.gameGrid.querySelectorAll('.player, .ball, .defense').forEach(el => el.remove());
+    elements.gameGrid.querySelectorAll('.player, .ball, .defense, .teammate').forEach(el => el.remove());
 
         const playerEl = document.createElement('div');
         playerEl.className = 'player';
@@ -149,6 +163,13 @@ document.addEventListener('DOMContentLoaded', function() {
             elements.gameGrid.children[d.y * gameState.grid.width + d.x].appendChild(defenseEl);
         });
 
+        if (gameState.teammate) {
+            const mateEl = document.createElement('div');
+            mateEl.className = 'teammate';
+            mateEl.style.backgroundImage = `url('./personajes/personaje${gameState.teammate.spriteId || 15}.png')`;
+            elements.gameGrid.children[gameState.teammate.y * gameState.grid.width + gameState.teammate.x].appendChild(mateEl);
+        }
+
         elements.movesCounter.textContent = gameState.moves;
     }
 
@@ -160,6 +181,17 @@ document.addEventListener('DOMContentLoaded', function() {
                 gameState.player.x = newX;
                 gameState.player.y = newY;
                 gameState.moves++;
+            } else {
+                // Mensajes de bloqueo
+                const out = newX < 0 || newX >= gameState.grid.width || newY < 0 || newY >= gameState.grid.height;
+                const byDefense = gameState.defenses.some(d => d.x === newX && d.y === newY);
+                if (out) {
+                    elements.pythonConsole.textContent = 'avanzar(): No puedes salir del campo.';
+                } else if (byDefense) {
+                    elements.pythonConsole.textContent = 'avanzar(): Casilla ocupada por un defensor.';
+                } else {
+                    elements.pythonConsole.textContent = 'avanzar(): Movimiento bloqueado.';
+                }
             }
         },
         girar_izquierda: () => {
@@ -171,6 +203,12 @@ document.addEventListener('DOMContentLoaded', function() {
             if (!gameState.player.hasBall && gameState.ball.visible && gameState.player.x === gameState.ball.x && gameState.player.y === gameState.ball.y) {
                 gameState.player.hasBall = true;
                 gameState.moves++;
+            } else {
+                if (gameState.player.hasBall) {
+                    elements.pythonConsole.textContent = 'recoger_balon(): Ya tienes el balón.';
+                } else {
+                    elements.pythonConsole.textContent = 'recoger_balon(): No hay balón en esta casilla.';
+                }
             }
         },
         soltar_balon: () => {
@@ -359,7 +397,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function checkCompletion() {
-        if (gameState.player.hasBall && gameState.player.x === gameState.goalArea.x && gameState.goalArea.y.includes(gameState.player.y)) {
+        // Objetivo por área de gol (niveles antiguos)
+        if (!gameState.target && gameState.player.hasBall && gameState.player.x === gameState.goalArea.x && gameState.goalArea.y.includes(gameState.player.y)) {
             const playerEl = document.querySelector('.player');
             if(playerEl) playerEl.classList.add('celebration');
             stopExecution();
@@ -373,6 +412,30 @@ document.addEventListener('DOMContentLoaded', function() {
             elements.recordMoves.textContent = gameState.bestScores[gameState.currentLevel];
             elements.recordMessage.textContent = isNewBest ? "¡Nuevo Récord!" : `Tu récord es ${gameState.bestScores[gameState.currentLevel]} movimientos.`;
 
+            setTimeout(() => { elements.levelCompletePanel.style.display = 'block'; }, 1000);
+            return;
+        }
+
+        // Objetivo por entrega al compañero en un punto específico (niveles nuevos)
+        if (gameState.target && !gameState.player.hasBall && gameState.ball.x === gameState.target.x && gameState.ball.y === gameState.target.y) {
+            // Validar límite de movimientos si existe
+            if (gameState.maxMoves && gameState.moves > gameState.maxMoves) {
+                elements.pythonConsole.textContent = `Entregaste el balón, pero excediste el límite de ${gameState.maxMoves} movimientos.`;
+                return;
+            }
+
+            const playerEl = document.querySelector('.player');
+            if(playerEl) playerEl.classList.add('celebration');
+            stopExecution();
+
+            const isNewBest = !gameState.bestScores[gameState.currentLevel] || gameState.moves < gameState.bestScores[gameState.currentLevel];
+            if (isNewBest) {
+                gameState.bestScores[gameState.currentLevel] = gameState.moves;
+                localStorage.setItem('bestScores', JSON.stringify(gameState.bestScores));
+            }
+            elements.movesUsed.textContent = gameState.moves;
+            elements.recordMoves.textContent = gameState.bestScores[gameState.currentLevel];
+            elements.recordMessage.textContent = isNewBest ? "¡Nuevo Récord!" : `Tu récord es ${gameState.bestScores[gameState.currentLevel]} movimientos.`;
             setTimeout(() => { elements.levelCompletePanel.style.display = 'block'; }, 1000);
         }
     }
@@ -418,6 +481,22 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         modals.levels.show();
     });
+
+    // Poblar el menú desplegable "Ir a nivel" en la barra superior
+    function populateLevelsDropdown() {
+        if (!elements.navLevelsDropdown) return;
+        elements.navLevelsDropdown.innerHTML = '';
+        levels.forEach(level => {
+            const li = document.createElement('li');
+            const a = document.createElement('a');
+            a.className = 'dropdown-item';
+            a.href = '#';
+            a.textContent = `Nivel ${level.id}: ${level.title}`;
+            a.addEventListener('click', (ev) => { ev.preventDefault(); loadLevel(level.id); });
+            li.appendChild(a);
+            elements.navLevelsDropdown.appendChild(li);
+        });
+    }
 
     elements.nextLevelButton.addEventListener('click', () => {
         const nextId = gameState.currentLevel + 1;
@@ -470,5 +549,6 @@ document.addEventListener('DOMContentLoaded', function() {
     } else {
         modals.welcome.show();
     }
+    populateLevelsDropdown();
     document.querySelector('.avatar-slide[data-avatar-id="1"]').classList.add('selected');
 });

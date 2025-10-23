@@ -41,7 +41,12 @@ document.addEventListener('DOMContentLoaded', function() {
         stepExecution: null,
         stepState: null,
         highlightingEnabled: true,
-        lastHighlightedLine: null
+        lastHighlightedLine: null,
+        teammate: null,
+        target: null,
+        maxMoves: null,
+        teammateHasBall: false,
+        exceededMoveLimit: false
     };
 
     const levels = [
@@ -58,6 +63,22 @@ document.addEventListener('DOMContentLoaded', function() {
         { id: 6, title: "Pases milimétricos", description: "Entre líneas: evita la muralla y entrega el balón a tu compañero (máx 18 movimientos).", playerStart: { x: 1, y: 5 }, ballPosition: { x: 2, y: 5 }, defenses: [
             { x: 4, y: 4 }, { x: 4, y: 5 }, { x: 4, y: 6 }, { x: 5, y: 4 }, { x: 6, y: 5 }, { x: 7, y: 4 }, { x: 7, y: 6 }
         ], teammate: { x: 8, y: 4, spriteId: 14 }, target: { x: 8, y: 4 }, maxMoves: 18 }
+        ,
+        { id: 7, title: "Triangulación rápida", description: "Abre ángulos, esquiva a tres líneas y entrega al extremo (máx 20 movimientos).", playerStart: { x: 0, y: 6 }, ballPosition: { x: 1, y: 6 }, defenses: [
+            { x: 2, y: 4 }, { x: 3, y: 4 }, { x: 4, y: 4 },
+            { x: 5, y: 3 }, { x: 5, y: 5 },
+            { x: 6, y: 2 }, { x: 6, y: 6 }
+        ], teammate: { x: 9, y: 5, spriteId: 13 }, target: { x: 9, y: 5 }, maxMoves: 20 },
+        { id: 8, title: "Cambios de banda", description: "Progresa por izquierda, gira al espacio y asiste al compañero (máx 22 movimientos).", playerStart: { x: 0, y: 1 }, ballPosition: { x: 1, y: 1 }, defenses: [
+            { x: 3, y: 0 }, { x: 3, y: 1 }, { x: 3, y: 2 },
+            { x: 5, y: 1 }, { x: 6, y: 1 },
+            { x: 7, y: 2 }, { x: 7, y: 3 }
+        ], teammate: { x: 8, y: 3, spriteId: 12 }, target: { x: 8, y: 3 }, maxMoves: 22 },
+        { id: 9, title: "Entre centrales", description: "Filtra entre la línea y entrega al 9 en el borde del área (máx 19 movimientos).", playerStart: { x: 1, y: 3 }, ballPosition: { x: 2, y: 3 }, defenses: [
+            { x: 4, y: 2 }, { x: 4, y: 3 }, { x: 4, y: 4 },
+            { x: 6, y: 2 }, { x: 6, y: 4 },
+            { x: 7, y: 3 }
+        ], teammate: { x: 8, y: 3, spriteId: 11 }, target: { x: 8, y: 3 }, maxMoves: 19 }
     ];
 
     // DOM Elements
@@ -125,6 +146,8 @@ document.addEventListener('DOMContentLoaded', function() {
     gameState.teammate = level.teammate ? { ...level.teammate } : null;
     gameState.target = level.target ? { ...level.target } : null;
     gameState.maxMoves = level.maxMoves || null;
+    gameState.teammateHasBall = false;
+    gameState.exceededMoveLimit = false;
 
         elements.currentLevel.textContent = level.id;
         elements.missionTitle.textContent = `Misión: ${level.title}`;
@@ -168,6 +191,11 @@ document.addEventListener('DOMContentLoaded', function() {
             mateEl.className = 'teammate';
             mateEl.style.backgroundImage = `url('./personajes/personaje${gameState.teammate.spriteId || 15}.png')`;
             elements.gameGrid.children[gameState.teammate.y * gameState.grid.width + gameState.teammate.x].appendChild(mateEl);
+            if (gameState.teammateHasBall) {
+                const ballEl = document.createElement('div');
+                ballEl.className = 'ball in-possession';
+                mateEl.appendChild(ballEl);
+            }
         }
 
         elements.movesCounter.textContent = gameState.moves;
@@ -243,7 +271,9 @@ document.addEventListener('DOMContentLoaded', function() {
             let i = 0;
             while (i < linesBlock.length) {
                 const line = linesBlock[i];
-                const trimmedLine = line.text.trim();
+                // Remove inline comments starting with '#'
+                const noComment = line.text.split('#')[0];
+                const trimmedLine = noComment.trim();
                 
                 if (trimmedLine === '' || trimmedLine.startsWith('#')) {
                     i++;
@@ -273,6 +303,29 @@ document.addEventListener('DOMContentLoaded', function() {
                     continue;
                 }
 
+                // **WHILE LOOP PARSING** (limited conditions supported)
+                const whileMatch = trimmedLine.match(/^while\s+(not\s+)?(frente_despejado\(\)|tiene_balon\(\))\s*:\s*$/);
+                if (whileMatch) {
+                    const negate = !!whileMatch[1];
+                    const funcCall = whileMatch[2];
+                    const funcName = funcCall.startsWith('frente_despejado') ? 'frente_despejado' : 'tiene_balon';
+                    const bodyLines = [];
+                    const whileIndent = getIndent(line);
+                    let j = i + 1;
+                    while (j < linesBlock.length && getIndent(linesBlock[j]) > whileIndent) {
+                        bodyLines.push(linesBlock[j]);
+                        j++;
+                    }
+                    commands.push({
+                        type: 'while',
+                        cond: { func: funcName, negate },
+                        body: parseBlock(bodyLines),
+                        lineNum: line.num
+                    });
+                    i = j;
+                    continue;
+                }
+
                 commands.push({ type: 'command', text: trimmedLine, lineNum: line.num });
                 i++;
             }
@@ -282,15 +335,22 @@ document.addEventListener('DOMContentLoaded', function() {
         // Find function definitions
         for (let i = 0; i < allLines.length; i++) {
             const line = allLines[i];
-            const defMatch = line.text.match(/^\s*def\s+([a-zA-Z0-9_]+)\s*\(\s*\):\s*$/);
+            const defLineNoComment = line.text.split('#')[0];
+            const defMatch = defLineNoComment.match(/^\s*def\s+([a-zA-Z0-9_]+)\s*\(\s*\):\s*$/);
             if (defMatch) {
                 const funcName = defMatch[1];
                 const bodyLines = [];
                 const defIndent = getIndent(line);
                 let j = i + 1;
-                // Include subsequent lines that are either indented more than the def
-                // or blank lines that may appear before the first indented line.
-                while (j < allLines.length && (getIndent(allLines[j]) > defIndent || allLines[j].text.trim() === '')) {
+                // Include subsequent lines that are either indented more than the def,
+                // or blank lines, or comment-only lines (even if not indented).
+                while (
+                    j < allLines.length && (
+                        getIndent(allLines[j]) > defIndent ||
+                        allLines[j].text.trim() === '' ||
+                        allLines[j].text.trim().startsWith('#')
+                    )
+                ) {
                     bodyLines.push(allLines[j]);
                     j++;
                 }
@@ -372,6 +432,24 @@ document.addEventListener('DOMContentLoaded', function() {
                 context.pc++;
                 return executeStep(); // Process next command immediately
             }
+        } else if (command.type === 'while') {
+            // Evaluate condition
+            const evalCond = () => {
+                let val = false;
+                if (command.cond.func === 'frente_despejado') val = gameActions.frente_despejado();
+                else if (command.cond.func === 'tiene_balon') val = gameActions.tiene_balon();
+                return command.cond.negate ? !val : val;
+            };
+            if (context.whileGuard === undefined) context.whileGuard = {};
+            // When condition true: execute body (push context) and keep PC at current while command
+            if (evalCond()) {
+                // Prevent runaway super-fast while loops with empty body by at least advancing display
+                state.callStack.push({ type: 'context', name: 'while_body', pc: 0, commands: command.body });
+            } else {
+                // Condition false: advance past while
+                context.pc++;
+                return executeStep();
+            }
         }
         
         checkCompletion();
@@ -417,27 +495,85 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         // Objetivo por entrega al compañero en un punto específico (niveles nuevos)
-        if (gameState.target && !gameState.player.hasBall && gameState.ball.x === gameState.target.x && gameState.ball.y === gameState.target.y) {
-            // Validar límite de movimientos si existe
+        const ballOnTarget = gameState.target && gameState.ball.x === gameState.target.x && gameState.ball.y === gameState.target.y;
+        const ballOnTeammate = gameState.teammate && gameState.ball.x === gameState.teammate.x && gameState.ball.y === gameState.teammate.y;
+        if (!gameState.player.hasBall && (ballOnTarget || ballOnTeammate)) {
+            // Evaluar límite de movimientos: siempre animamos, pero informamos si se excede
             if (gameState.maxMoves && gameState.moves > gameState.maxMoves) {
+                gameState.exceededMoveLimit = true;
                 elements.pythonConsole.textContent = `Entregaste el balón, pero excediste el límite de ${gameState.maxMoves} movimientos.`;
+            }
+            // Detener ejecución del usuario y animar al compañero marcando gol
+            stopExecution();
+            startTeammateGoalAnimation();
+        }
+    }
+
+    function startTeammateGoalAnimation() {
+        if (!gameState.teammate) { finalizeLevelCompletion(); return; }
+        // Construir ruta: si el compañero no está sobre el balón, ir primero a la posición del balón,
+        // luego continuar hacia la portería.
+        const steps = [];
+        const stepDelay = Math.max(80, 400 - gameState.speed * 30);
+
+        const enqueuePath = (fromX, fromY, toX, toY) => {
+            // Mover por Y primero, luego por X (simple y suficiente para celebración)
+            let y = fromY;
+            while (y !== toY) { steps.push({ dx: 0, dy: toY > y ? 1 : -1 }); y += (toY > y ? 1 : -1); }
+            let x = fromX;
+            while (x !== toX) { steps.push({ dx: toX > x ? 1 : -1, dy: 0 }); x += (toX > x ? 1 : -1); }
+        };
+
+        // 1) Ir hacia el balón si no coincide posición
+        const ballPos = { x: gameState.ball.x, y: gameState.ball.y };
+        if (gameState.teammate.x !== ballPos.x || gameState.teammate.y !== ballPos.y) {
+            enqueuePath(gameState.teammate.x, gameState.teammate.y, ballPos.x, ballPos.y);
+        }
+
+        // 2) Luego ir hacia la portería (columna goalArea.x, fila más cercana)
+        const goalX = gameState.goalArea.x;
+        const goalYs = gameState.goalArea.y;
+        const currentY = (steps.length ? ballPos.y : gameState.teammate.y);
+        const targetY = goalYs.reduce((best, y) => Math.abs(y - currentY) < Math.abs(best - currentY) ? y : best, goalYs[0]);
+        enqueuePath(ballPos.x, currentY, goalX, targetY);
+
+        let i = 0;
+        const timer = setInterval(() => {
+            if (i === 0) {
+                // Tomar el balón al iniciar la animación
+                gameState.teammateHasBall = true;
+                gameState.ball.visible = false;
+            }
+            if (i >= steps.length) {
+                clearInterval(timer);
+                const mateEl = document.querySelector('.teammate');
+                if (mateEl) mateEl.classList.add('celebration');
+                setTimeout(() => finalizeLevelCompletion(), 800);
                 return;
             }
+            const s = steps[i++];
+            gameState.teammate.x += s.dx;
+            gameState.teammate.y += s.dy;
+            updateGameDisplay();
+        }, stepDelay);
+    }
 
-            const playerEl = document.querySelector('.player');
-            if(playerEl) playerEl.classList.add('celebration');
-            stopExecution();
-
-            const isNewBest = !gameState.bestScores[gameState.currentLevel] || gameState.moves < gameState.bestScores[gameState.currentLevel];
+    function finalizeLevelCompletion() {
+        const exceeded = !!gameState.exceededMoveLimit;
+        let isNewBest = false;
+        if (!exceeded) {
+            isNewBest = !gameState.bestScores[gameState.currentLevel] || gameState.moves < gameState.bestScores[gameState.currentLevel];
             if (isNewBest) {
                 gameState.bestScores[gameState.currentLevel] = gameState.moves;
                 localStorage.setItem('bestScores', JSON.stringify(gameState.bestScores));
             }
-            elements.movesUsed.textContent = gameState.moves;
-            elements.recordMoves.textContent = gameState.bestScores[gameState.currentLevel];
-            elements.recordMessage.textContent = isNewBest ? "¡Nuevo Récord!" : `Tu récord es ${gameState.bestScores[gameState.currentLevel]} movimientos.`;
-            setTimeout(() => { elements.levelCompletePanel.style.display = 'block'; }, 1000);
         }
+        elements.movesUsed.textContent = gameState.moves;
+        elements.recordMoves.textContent = gameState.bestScores[gameState.currentLevel] ?? '-';
+        elements.recordMessage.textContent = exceeded
+            ? `Gol del compañero, pero excediste el límite de ${gameState.maxMoves} movimientos. ¡Intenta optimizar!`
+            : (isNewBest ? "¡Nuevo Récord!" : `Tu récord es ${gameState.bestScores[gameState.currentLevel]} movimientos.`);
+        elements.levelCompletePanel.style.display = 'block';
     }
 
     // --- Event Listeners ---
